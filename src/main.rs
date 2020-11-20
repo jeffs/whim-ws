@@ -1,18 +1,30 @@
+use serde::Deserialize;
+use tokio::fs;
 use warp::Filter;
 
-use std::env;
+#[derive(Debug, Deserialize)]
+struct TLS {
+    crt: String,
+    key: String,
+}
+
+#[derive(Debug, Deserialize)]
+struct Config {
+    tls: TLS,
+}
 
 #[tokio::main]
-async fn main() {
-    // TODO: Add ArgParse.
-    // TODO: Automate self-signed key gen.
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    let config = fs::read("whim.toml").await?;
+    let config: Config = toml::from_slice(&config)?;
+    let routes = warp::any().map(|| "Hello, world.\n");
 
-    let routes = warp::any().map(|| "Hello, world.");
-    let args: Vec<_> = env::args().collect();
     warp::serve(routes)
         .tls()
-        .cert_path(&args[1])
-        .key_path(&args[2])
+        .cert_path(config.tls.crt)
+        .key_path(config.tls.key)
         .run(([0, 0, 0, 0], 3000))
         .await;
+
+    Ok(())
 }
