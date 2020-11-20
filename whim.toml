@@ -1,3 +1,4 @@
 [tls]
-crt = "unencrypted/server.crt"
-key = "unencrypted/server.key"
+crt = "/home/jeff/pkg/local-cert-generator/encrypted/server.crt"
+key = "/home/jeff/pkg/local-cert-generator/encrypted/server.key"
+#key = "/home/jeff/pkg/local-cert-generator/encrypted/pkcs8.key"
