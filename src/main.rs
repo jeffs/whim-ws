@@ -20,17 +20,21 @@ async fn openssl(args: &[&str]) -> io::Result<Vec<u8>> {
     Ok(Command::new("openssl").args(args).output().await?.stdout)
 }
 
+async fn read_key(path: &str) -> io::Result<Vec<u8>> {
+    let key = fs::read(&path).await?;
+    if key.starts_with("-----BEGIN ENCRYPTED".as_bytes()) {
+        openssl(&["pkcs8", "-in", path]).await
+    } else {
+        Ok(key)
+    }
+}
+
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let config = fs::read("whim.toml").await?;
     let config: Config = toml::from_slice(&config)?;
+    let key = read_key(&config.tls.key).await?;
     let routes = warp::any().map(|| "Hello, world.\n");
-
-    let mut key = fs::read(&config.tls.key).await?;
-    if key.starts_with("-----BEGIN ENCRYPTED".as_bytes()) {
-        key = openssl(&["pkcs8", "-in", &config.tls.key]).await?
-    }
-
     println!("https://localhost:3000/");
     warp::serve(routes)
         .tls()
@@ -38,6 +42,5 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .key(key)
         .run(([0, 0, 0, 0], 3000))
         .await;
-
     Ok(())
 }
