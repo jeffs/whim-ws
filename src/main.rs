@@ -1,8 +1,9 @@
 use serde::Deserialize;
 use std::io;
+use std::process;
 use std::str;
-use tokio::fs;
-use tokio::process::Command;
+use tokio3::fs;
+use tokio3::process::Command;
 use warp::Filter;
 
 #[derive(Debug, Deserialize)]
@@ -43,4 +44,16 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .run(([0, 0, 0, 0], 3000))
         .await;
     Ok(())
+}
+
+fn main() {
+    let res = tokio3::runtime::Builder::new_multi_thread()
+        .enable_all()
+        .build()
+        .unwrap()
+        .block_on(run());
+    if let Err(err) = res {
+        eprintln!("error: {}", err);
+        process::exit(1);
+    }
 }

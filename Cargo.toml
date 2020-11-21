@@ -16,7 +16,7 @@ toml = "0.5"
 warp = { path = "../../pkg/warp", version = "0.2", features = ["tls"] }
 
 # Async event framework
-[dependencies.tokio]
+[dependencies.tokio3]
+package = "tokio"
 version = "0.3"
 features = ["fs", "macros", "process", "rt-multi-thread"]
-
