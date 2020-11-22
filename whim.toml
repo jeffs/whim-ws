@@ -1,3 +1,4 @@
 [tls]
 crt = "/home/jeff/.ssh/local/whim.crt"
 key = "/home/jeff/.ssh/local/whim.key"
+pass = "file:.pass"

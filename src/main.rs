@@ -18,6 +18,7 @@ const HTTPS_PORT: u16 = 3000;
 struct TLS {
     crt: String,
     key: String,
+    pass: String,
 }
 
 #[derive(Debug, Deserialize)]
@@ -33,10 +34,10 @@ async fn openssl(args: &[&str]) -> io::Result<Vec<u8>> {
     Ok(Command::new("openssl").args(args).output().await?.stdout)
 }
 
-async fn read_key(path: &str) -> io::Result<Vec<u8>> {
-    let key = fs::read(&path).await?;
+async fn read_key(tls: &TLS) -> io::Result<Vec<u8>> {
+    let key = fs::read(&tls.key).await?;
     if key.starts_with("-----BEGIN ENCRYPTED".as_bytes()) {
-        openssl(&["pkcs8", "-in", path]).await
+        openssl(&["pkcs8", "-in", &tls.key, "-passin", &tls.pass]).await
     } else {
         Ok(key)
     }
@@ -76,8 +77,8 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let http = warp::serve(http_routes());
     let https = warp::serve(https_routes())
         .tls()
-        .cert_path(config.tls.crt)
-        .key(read_key(&config.tls.key).await?);
+        .cert_path(&config.tls.crt)
+        .key(read_key(&config.tls).await?);
     println!("https://localhost:{}/", HTTPS_PORT);
     futures::join!(
         http.run((HOST_MASK, HTTP_PORT)).compat(),
