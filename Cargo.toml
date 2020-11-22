@@ -7,16 +7,26 @@ edition = "2018"
 [dependencies]
 
 # Serialization
-serde = { version = "1.0", features = ["derive"] }
+[dependencies.serde]
+features = ["derive"]
+version = "1.0"
 
-# Config parser
-toml = "0.5"
-
-# Web server
-warp = { path = "../../pkg/warp", version = "0.2", features = ["tls"] }
-
-# Async event framework
-[dependencies.tokio3]
-package = "tokio"
+# Event loop, and a bunch of async event support
+[dependencies.tokio]
 version = "0.3"
 features = ["fs", "macros", "process", "rt-multi-thread"]
+
+# Compatibility layer, so we can depend on a newer version of tokio (the async
+# event framework) than the warp (the web server) does.
+[dependencies.tokio-compat-02]
+version = "0.1.2"
+
+# Config parser
+[dependencies.toml]
+version = "0.5"
+
+# Web server
+[dependencies.warp]
+features = ["tls"]
+path = "../../pkg/warp"
+version = "0.2"

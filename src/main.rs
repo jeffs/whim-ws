@@ -2,8 +2,9 @@ use serde::Deserialize;
 use std::io;
 use std::process;
 use std::str;
-use tokio3::fs;
-use tokio3::process::Command;
+use tokio::fs;
+use tokio::process::Command;
+use tokio_compat_02::FutureExt;
 use warp::Filter;
 
 #[derive(Debug, Deserialize)]
@@ -30,8 +31,7 @@ async fn read_key(path: &str) -> io::Result<Vec<u8>> {
     }
 }
 
-#[tokio::main]
-async fn main() -> Result<(), Box<dyn std::error::Error>> {
+async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let config = fs::read("whim.toml").await?;
     let config: Config = toml::from_slice(&config)?;
     let key = read_key(&config.tls.key).await?;
@@ -42,17 +42,18 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .cert_path(config.tls.crt)
         .key(key)
         .run(([0, 0, 0, 0], 3000))
+        .compat()
         .await;
     Ok(())
 }
 
 fn main() {
-    let res = tokio3::runtime::Builder::new_multi_thread()
+    if let Err(err) = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
         .unwrap()
-        .block_on(run());
-    if let Err(err) = res {
+        .block_on(async_main())
+    {
         eprintln!("error: {}", err);
         process::exit(1);
     }

@@ -1120,6 +1120,7 @@ dependencies = [
  "lazy_static",
  "memchr",
  "mio 0.6.22",
+ "num_cpus",
  "pin-project-lite 0.1.11",
  "slab",
 ]
@@ -1132,6 +1133,7 @@ checksum = "9dfe2523e6fa84ddf5e688151d4e5fddc51678de9752c6512a24714c23818d61"
 dependencies = [
  "autocfg 1.0.1",
  "bytes 0.6.0",
+ "futures-core",
  "lazy_static",
  "libc",
  "mio 0.7.6",
@@ -1141,6 +1143,19 @@ dependencies = [
  "slab",
  "tokio-macros",
  "winapi 0.3.9",
+]
+
+[[package]]
+name = "tokio-compat-02"
+version = "0.1.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "bb4cec419b8b6f06c32e74aae6d8c5e79646d038a38e5ea2b36045f2c3296e22"
+dependencies = [
+ "bytes 0.5.6",
+ "once_cell",
+ "pin-project-lite 0.1.11",
+ "tokio 0.2.23",
+ "tokio 0.3.4",
 ]
 
 [[package]]
@@ -1471,6 +1486,7 @@ version = "0.1.0"
 dependencies = [
  "serde",
  "tokio 0.3.4",
+ "tokio-compat-02",
  "toml",
  "warp",
 ]
