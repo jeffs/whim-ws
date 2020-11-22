@@ -1,4 +1,3 @@
 [tls]
-crt = "/home/jeff/pkg/local-cert-generator/encrypted/server.crt"
-key = "/home/jeff/pkg/local-cert-generator/encrypted/server.key"
-#key = "/home/jeff/pkg/local-cert-generator/encrypted/pkcs8.key"
+crt = "/home/jeff/.ssh/local/whim.crt"
+key = "/home/jeff/.ssh/local/whim.key"
