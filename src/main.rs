@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::convert::Infallible;
 use std::{io, process};
 use tokio::fs;
 use tokio::process::Command;
@@ -6,7 +7,12 @@ use tokio_compat_02::FutureExt;
 use warp::http::uri::{Authority, PathAndQuery, Scheme};
 use warp::http::Uri;
 use warp::path::FullPath;
-use warp::Filter;
+use warp::Rejection;
+use warp::{Filter, Reply};
+
+const HOST_MASK: [u8; 4] = [0, 0, 0, 0];
+const HTTP_PORT: u16 = 8000;
+const HTTPS_PORT: u16 = 3000;
 
 #[derive(Debug, Deserialize)]
 struct TLS {
@@ -16,6 +22,10 @@ struct TLS {
 
 #[derive(Debug, Deserialize)]
 struct Config {
+    // TODO:
+    // host_mask: [u8; 4],
+    // http_port: u16,
+    // https_port: u16,
     tls: TLS,
 }
 
@@ -32,39 +42,47 @@ async fn read_key(path: &str) -> io::Result<Vec<u8>> {
     }
 }
 
-async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
-    let port: u16 = 3000;
-    let config = fs::read("whim.toml").await?;
-    let config: Config = toml::from_slice(&config)?;
-    let key = read_key(&config.tls.key).await?;
-    let routes = warp::any().map(|| "Hello, world.\n");
-    println!("https://localhost:{}/", port);
-    let https = warp::serve(routes)
-        .tls()
-        .cert_path(config.tls.crt)
-        .key(key)
-        .run(([0, 0, 0, 0], port))
-        .compat();
-    let http_routes = warp::any()
-        .and(warp::header::<String>("host"))
-        .and(warp::path::full())
-        .map(move |host: String, path: FullPath| {
-            // TODO: Retain "user:password@".
-            // TODO: Reject request unless "host" header is a valid authority.
-            let authority: Authority = host.parse().unwrap();
-            let authority: Authority = format!("{}:{}", authority.host(), port).parse().unwrap();
-            let path_and_query: PathAndQuery = path.as_str().parse().unwrap();
+fn path_and_query() -> impl Filter<Extract = (PathAndQuery,), Error = Infallible> + Copy {
+    // TODO: Take the existing PathAndQuery from the FullPath.  It's private in
+    // Warp, so we have to do this silly as_str/parse dance.
+    warp::path::full().map(|path: FullPath| path.as_str().parse::<PathAndQuery>().unwrap())
+}
+
+fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
+    // TODO: Support remote clients (requiring secure login).
+    // TODO: Forward user:password@.
+    let from = format!("localhost:{}", HTTP_PORT);
+    let to: Authority = format!("localhost:{}", HTTPS_PORT).parse().unwrap();
+    warp::any()
+        .and(warp::host::exact(&from))
+        .and(path_and_query())
+        .map(move |path_and_query: PathAndQuery| {
             let target = Uri::builder()
                 .scheme(Scheme::HTTPS)
-                .authority(authority)
+                .authority(to.clone())
                 .path_and_query(path_and_query)
                 .build()
                 .unwrap();
             warp::redirect(target)
-        });
-    // TODO: response.redirect('https://' + request.headers.host + request.url);
-    let http = warp::serve(http_routes).run(([0, 0, 0, 0], 8000)).compat();
-    futures::join!(https, http);
+        })
+}
+
+fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Infallible> + Clone {
+    warp::any().map(|| "Hello, world.\n")
+}
+
+async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
+    let config: Config = toml::from_slice(&fs::read("whim.toml").await?)?;
+    let http = warp::serve(http_routes());
+    let https = warp::serve(https_routes())
+        .tls()
+        .cert_path(config.tls.crt)
+        .key(read_key(&config.tls.key).await?);
+    println!("https://localhost:{}/", HTTPS_PORT);
+    futures::join!(
+        http.run((HOST_MASK, HTTP_PORT)).compat(),
+        https.run((HOST_MASK, HTTPS_PORT)).compat()
+    );
     Ok(())
 }
 
