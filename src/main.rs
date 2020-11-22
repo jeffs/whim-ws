@@ -4,7 +4,7 @@ use tokio::fs;
 use tokio::process::Command;
 use tokio_compat_02::FutureExt;
 use warp::http::uri::{Authority, PathAndQuery, Scheme};
-use warp::http::{HeaderValue, Uri};
+use warp::http::Uri;
 use warp::path::FullPath;
 use warp::Filter;
 
@@ -46,15 +46,12 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
         .run(([0, 0, 0, 0], port))
         .compat();
     let http_routes = warp::any()
-        .and(warp::path::host())
+        .and(warp::header::<String>("host"))
         .and(warp::path::full())
-        .map(move |host: Option<HeaderValue>, path: FullPath| {
-            // TODO: Reject request unless host header is a string.
-            let authority: Authority = host
-                .and_then(|v| v.to_str().ok().map(|s| s.to_owned()))
-                .and_then(|s| s.parse().ok())
-                .unwrap();
+        .map(move |host: String, path: FullPath| {
             // TODO: Retain "user:password@".
+            // TODO: Reject request unless "host" header is a valid authority.
+            let authority: Authority = host.parse().unwrap();
             let authority: Authority = format!("{}:{}", authority.host(), port).parse().unwrap();
             let path_and_query: PathAndQuery = path.as_str().parse().unwrap();
             let target = Uri::builder()
