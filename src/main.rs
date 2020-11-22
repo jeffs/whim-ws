@@ -1,10 +1,11 @@
 use serde::Deserialize;
-use std::io;
-use std::process;
-use std::str;
+use std::{io, process};
 use tokio::fs;
 use tokio::process::Command;
 use tokio_compat_02::FutureExt;
+use warp::http::uri::{Authority, PathAndQuery, Scheme};
+use warp::http::{HeaderValue, Uri};
+use warp::path::FullPath;
 use warp::Filter;
 
 #[derive(Debug, Deserialize)]
@@ -32,18 +33,41 @@ async fn read_key(path: &str) -> io::Result<Vec<u8>> {
 }
 
 async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
+    let port: u16 = 3000;
     let config = fs::read("whim.toml").await?;
     let config: Config = toml::from_slice(&config)?;
     let key = read_key(&config.tls.key).await?;
     let routes = warp::any().map(|| "Hello, world.\n");
-    println!("https://localhost:3000/");
-    warp::serve(routes)
+    println!("https://localhost:{}/", port);
+    let https = warp::serve(routes)
         .tls()
         .cert_path(config.tls.crt)
         .key(key)
-        .run(([0, 0, 0, 0], 3000))
-        .compat()
-        .await;
+        .run(([0, 0, 0, 0], port))
+        .compat();
+    let http_routes = warp::any()
+        .and(warp::path::host())
+        .and(warp::path::full())
+        .map(move |host: Option<HeaderValue>, path: FullPath| {
+            // TODO: Reject request unless host header is a string.
+            let authority: Authority = host
+                .and_then(|v| v.to_str().ok().map(|s| s.to_owned()))
+                .and_then(|s| s.parse().ok())
+                .unwrap();
+            // TODO: Retain "user:password@".
+            let authority: Authority = format!("{}:{}", authority.host(), port).parse().unwrap();
+            let path_and_query: PathAndQuery = path.as_str().parse().unwrap();
+            let target = Uri::builder()
+                .scheme(Scheme::HTTPS)
+                .authority(authority)
+                .path_and_query(path_and_query)
+                .build()
+                .unwrap();
+            warp::redirect(target)
+        });
+    // TODO: response.redirect('https://' + request.headers.host + request.url);
+    let http = warp::serve(http_routes).run(([0, 0, 0, 0], 8000)).compat();
+    futures::join!(https, http);
     Ok(())
 }
 

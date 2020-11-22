@@ -6,6 +6,9 @@ edition = "2018"
 
 [dependencies]
 
+[dependencies.futures]
+version = "0.3"
+
 # Serialization
 [dependencies.serde]
 features = ["derive"]
