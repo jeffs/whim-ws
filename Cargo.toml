@@ -6,6 +6,10 @@ edition = "2018"
 
 [dependencies]
 
+# Logging
+[dependencies.env_logger]
+version = "0.8.2"
+
 # Futures (aka Promises)
 [dependencies.futures]
 version = "0.3"

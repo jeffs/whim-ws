@@ -84,7 +84,7 @@ fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + C
         .and(warp::path("api"))
         .and(warp::path("v0"))
         .and(warp::path("hello").and(world.or(param)));
-    api.or(warp::fs::dir("web"))
+    api.or(warp::fs::dir("web")).with(warp::log("HTTPS"))
 }
 
 async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
@@ -103,6 +103,7 @@ async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
 }
 
 fn main() {
+    env_logger::init();
     if let Err(err) = tokio::runtime::Builder::new_multi_thread()
         .enable_all()
         .build()
