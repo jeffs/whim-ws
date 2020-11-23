@@ -11,6 +11,10 @@ use warp::path::FullPath;
 use warp::Rejection;
 use warp::{Filter, Reply};
 
+///////////////////////////////////////////////////////////////////////////////
+// CONFIG
+///////////////////////////////////////////////////////////////////////////////
+
 const HOST_MASK: [u8; 4] = [0, 0, 0, 0];
 const HTTP_PORT: u16 = 8000;
 const HTTPS_PORT: u16 = 3000;
@@ -31,6 +35,10 @@ struct Config {
     tls: TLS,
 }
 
+///////////////////////////////////////////////////////////////////////////////
+// OPENSSL
+///////////////////////////////////////////////////////////////////////////////
+
 async fn openssl(args: &[&str]) -> io::Result<Vec<u8>> {
     Ok(Command::new("openssl").args(args).output().await?.stdout)
 }
@@ -44,10 +52,13 @@ async fn read_key(tls: &TLS) -> io::Result<Vec<u8>> {
     }
 }
 
-fn path_and_query() -> impl Filter<Extract = (PathAndQuery,), Error = Infallible> + Copy {
-    // TODO: Take the existing PathAndQuery from the FullPath.  It's private in
-    // Warp, so we have to do this silly as_str/parse dance.
-    warp::path::full().map(|path: FullPath| path.as_str().parse::<PathAndQuery>().unwrap())
+///////////////////////////////////////////////////////////////////////////////
+// WARP
+///////////////////////////////////////////////////////////////////////////////
+
+fn greet_param(param: String) -> String {
+    let name = percent_decode_str(&param).decode_utf8_lossy();
+    format!("Hello, {}.\n", name)
 }
 
 fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
@@ -69,11 +80,6 @@ fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Cl
         })
 }
 
-fn greet_param(param: String) -> String {
-    let name = percent_decode_str(&param).decode_utf8_lossy();
-    format!("Hello, {}.\n", name)
-}
-
 fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     // GET /                   => web directory
     // GET /api/v0/hello/      => Hello, world.
@@ -86,6 +92,16 @@ fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + C
         .and(warp::path("hello").and(world.or(param)));
     api.or(warp::fs::dir("web")).with(warp::log("HTTPS"))
 }
+
+fn path_and_query() -> impl Filter<Extract = (PathAndQuery,), Error = Infallible> + Copy {
+    // TODO: Take the existing PathAndQuery from the FullPath.  It's private in
+    // Warp, so we have to do this silly as_str/parse dance.
+    warp::path::full().map(|path: FullPath| path.as_str().parse::<PathAndQuery>().unwrap())
+}
+
+///////////////////////////////////////////////////////////////////////////////
+// MAIN
+///////////////////////////////////////////////////////////////////////////////
 
 async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
     let config: Config = toml::from_slice(&fs::read("whim.toml").await?)?;
