@@ -6,8 +6,13 @@ edition = "2018"
 
 [dependencies]
 
+# Futures (aka Promises)
 [dependencies.futures]
 version = "0.3"
+
+# URL decoder; e.g., "Hello%2C%20world%2E" => "Hello, world."
+[dependencies.percent-encoding]
+version = "2.1.0"
 
 # Serialization
 [dependencies.serde]

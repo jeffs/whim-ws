@@ -1527,6 +1527,7 @@ name = "whim"
 version = "0.1.0"
 dependencies = [
  "futures",
+ "percent-encoding",
  "serde",
  "tokio 0.3.4",
  "tokio-compat-02",

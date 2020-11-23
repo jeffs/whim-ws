@@ -1,3 +1,4 @@
+use percent_encoding::percent_decode_str;
 use serde::Deserialize;
 use std::convert::Infallible;
 use std::{io, process};
@@ -68,8 +69,15 @@ fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Cl
         })
 }
 
-fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Infallible> + Clone {
-    warp::any().map(|| "Hello, world.\n")
+fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
+    let hello = warp::path!("hello" / String)
+        .and(warp::path::end())
+        .map(|name: String| {
+            let name = percent_decode_str(&name).decode_utf8_lossy();
+            format!("Hello, {}.\n", name)
+        });
+    let world = warp::any().map(|| "Hello, world.\n");
+    warp::get().and(hello.or(world))
 }
 
 async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
