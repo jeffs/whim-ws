@@ -69,15 +69,22 @@ fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Cl
         })
 }
 
+fn greet_param(param: String) -> String {
+    let name = percent_decode_str(&param).decode_utf8_lossy();
+    format!("Hello, {}.\n", name)
+}
+
 fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    let hello = warp::path!("hello" / String)
-        .and(warp::path::end())
-        .map(|name: String| {
-            let name = percent_decode_str(&name).decode_utf8_lossy();
-            format!("Hello, {}.\n", name)
-        });
-    let world = warp::any().map(|| "Hello, world.\n");
-    warp::get().and(hello.or(world))
+    // GET /                   => web directory
+    // GET /api/v0/hello/      => Hello, world.
+    // GET /api/v0/hello/:name => Hello, {name}.
+    let world = warp::path::end().map(|| "Hello, world.\n");
+    let param = warp::path::param().map(greet_param);
+    let api = warp::get()
+        .and(warp::path("api"))
+        .and(warp::path("v0"))
+        .and(warp::path("hello").and(world.or(param)));
+    api.or(warp::fs::dir("web"))
 }
 
 async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
