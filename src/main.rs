@@ -1,11 +1,10 @@
+use std::error::Error;
 use std::process;
-use tokio::fs;
 use tokio_compat_02::FutureExt;
-
 use whim::{self, Config, HOST_MASK, HTTPS_PORT, HTTP_PORT};
 
-async fn async_main() -> Result<(), Box<dyn std::error::Error>> {
-    let config: Config = toml::from_slice(&fs::read("whim.toml").await?)?;
+async fn async_main() -> Result<(), Box<dyn Error>> {
+    let config = Config::from_file("whim.toml").await?;
     let http = warp::serve(whim::http_routes());
     let https = warp::serve(whim::https_routes())
         .tls()
