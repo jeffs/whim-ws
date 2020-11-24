@@ -27,7 +27,7 @@ pub fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> 
                 .path_and_query(path_and_query)
                 .build()
                 .unwrap();
-            warp::redirect(target)
+            warp::redirect(target).with(warp::log("HTTP"))
         })
 }
 
@@ -41,7 +41,9 @@ pub fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection>
         .and(warp::path("api"))
         .and(warp::path("v0"))
         .and(warp::path("hello").and(world.or(param)));
-    api.or(warp::fs::dir("web")).with(warp::log("HTTPS"))
+    api.or(warp::fs::dir("web"))
+        .with(warp::compression::gzip())
+        .with(warp::log("HTTPS"))
 }
 
 fn path_and_query() -> impl Filter<Extract = (PathAndQuery,), Error = Infallible> + Copy {

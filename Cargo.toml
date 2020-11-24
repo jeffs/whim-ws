@@ -39,6 +39,6 @@ version = "0.5"
 
 # Web server
 [dependencies.warp]
-features = ["tls"]
+features = ["compression", "tls"]
 path = "../../pkg/warp"
 version = "0.2"
