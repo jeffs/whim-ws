@@ -21,14 +21,6 @@ function reduce(reducers, state, action) {
   );
 }
 
-function removeUnordered(haystack, needle) {
-  const i = haystack.indexOf(needle);
-  if (i != -1) {
-    haystack[i] = haystack[haystack.length - 1];
-    haystack.pop();
-  }
-}
-
 export default function Store(reducers) {
   const watchers = new Map; // { [selector, [callback...]]... }
 
@@ -60,11 +52,5 @@ export default function Store(reducers) {
         watchers.set(selector, [listener]);
       }
     },
-
-    // unsubscribe(key, listener) {
-    //   if (key in listeners) {
-    //     removeUnordered(listeners[key], listener);
-    //   }
-    // },
   };
 }
