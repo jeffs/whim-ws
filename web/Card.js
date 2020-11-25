@@ -1,15 +1,16 @@
 function headerText(value) {
-  return value.trim() || 'world';
+  return value.trim() || 'card';
 }
 
 // Note: The name could just as well be local state.
-export default function Greeter(
+export default function Card(
   store,
   selector,
   inputActionCreator,
   submitActionCreator,
 ) {
   const header = document.createElement('h1');
+  header.classList.add('card__header');
   header.innerText = `Hello, ${headerText(selector(store.state()))}.`;
 
   const input = document.createElement('input');
@@ -19,6 +20,7 @@ export default function Greeter(
   });
 
   const form = document.createElement('form');
+  form.classList.add('card');
   form.append(header, input);
   form.addEventListener('submit', async event => {
     event.preventDefault();
