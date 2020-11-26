@@ -1,19 +1,9 @@
-import Card from './Card.js';
-import Store from './Store.js';
-import * as actions from './actions.js';
-import * as reducers from './reducers.js';
-import * as selectors from './selectors.js';
+import Host from './Host.js';
 
 async function main() {
-  const store = Store(reducers);
-  const card = Card(
-    store,
-    selectors.name,
-    actions.SetName,
-    actions.PostName
-  );
-  document.body.append(card.render());
-  card.focus();
+  const host = Host();
+  const shell = await host.getDefaultShell();
+  console.log(shell);
 }
 
 main();

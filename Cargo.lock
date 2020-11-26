@@ -1693,6 +1693,7 @@ dependencies = [
  "futures",
  "percent-encoding",
  "serde",
+ "serde_json",
  "tokio 0.3.4",
  "tokio-compat-02",
  "toml",

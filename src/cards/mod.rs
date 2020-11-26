@@ -1,0 +1,3 @@
+struct Echo {
+    text: String,
+}

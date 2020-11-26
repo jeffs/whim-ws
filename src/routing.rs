@@ -32,16 +32,20 @@ pub fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> 
         .with(warp::log("HTTP"))
 }
 
+fn get_shell(id: u32) -> String {
+    format!("shell #{}", id)
+}
+
 pub fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    // GET /                   => web directory
-    // GET /api/v0/hello/      => Hello, world.
-    // GET /api/v0/hello/:name => Hello, {name}.
+    // GET /               => web directory
+    // GET /v0/hello/      => Hello, world.
+    // GET /v0/hello/:name => Hello, {name}.
+    // GET /v0/shell/0     => default shell
     let world = warp::path::end().map(|| "Hello, world.\n");
     let param = warp::path::param().map(greet_param);
-    let api = warp::get()
-        .and(warp::path("api"))
-        .and(warp::path("v0"))
-        .and(warp::path("hello").and(world.or(param)));
+    let hello = warp::path("hello").and(world.or(param));
+    let shell = warp::path!("shell" / u32).map(get_shell);
+    let api = warp::get().and(warp::path("v0")).and(hello.or(shell));
     api.or(warp::fs::dir("web"))
         .with(warp::compression::gzip())
         .with(warp::log("HTTPS"))

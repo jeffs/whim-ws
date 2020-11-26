@@ -18,22 +18,25 @@ version = "0.3"
 [dependencies.percent-encoding]
 version = "2.1.0"
 
-# Serialization
+# Serialization framework; separate JSON and TOML libraries work with Serde
 [dependencies.serde]
 features = ["derive"]
 version = "1.0"
 
-# Event loop, and a bunch of async event support
+# JSON serialization
+[dependencies.serde_json]
+version = "1.0.59"
+
+# Async event framework
 [dependencies.tokio]
 version = "0.3"
 features = ["fs", "macros", "process", "rt-multi-thread"]
 
-# Compatibility layer, so we can depend on a newer version of tokio (the async
-# event framework) than the warp (the web server) does.
+# Dependency conflict work-around:  Warp wants Tokio 0.2, but Whim wants 0.3
 [dependencies.tokio-compat-02]
 version = "0.1.2"
 
-# Config parser
+# TOML (for config parsing)
 [dependencies.toml]
 version = "0.5"
 
