@@ -6,7 +6,6 @@ use std::convert::Infallible;
 use warp::http::uri::{Authority, PathAndQuery, Scheme};
 use warp::http::Uri;
 use warp::path::FullPath;
-use warp::ws::WebSocket;
 use warp::Rejection;
 use warp::{Filter, Reply};
 
@@ -70,12 +69,10 @@ fn with_client(
     warp::any().map(move || client.clone())
 }
 
-async fn connect_client(ws: WebSocket, client: ClientPointer) {
-    client.connect(ws).await
-}
-
-async fn ws_handler(ws: warp::ws::Ws, client: ClientPointer) -> Result<impl Reply, Rejection> {
-    Ok(ws.on_upgrade(move |s| connect_client(s, client)))
+// TODO: Look up the client by pre-registered ID.  Once we might reject
+// connections, change the return error type from Infallible to Rejection.
+async fn connect_client(ws: warp::ws::Ws, client: ClientPointer) -> Result<impl Reply, Infallible> {
+    Ok(ws.on_upgrade(|s| client.connect(s)))
 }
 
 // Defines all routes under /v0.
@@ -86,7 +83,7 @@ pub fn api_routes(
     let shell = warp::path!("shell" / u32).and(warp::get()).map(get_shell);
     let socket = warp::ws()
         .and(with_client(client))
-        .and_then(ws_handler)
+        .and_then(connect_client)
         .recover(to_not_found);
     warp::path("v0").and(health.or(shell).or(socket))
 }

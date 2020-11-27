@@ -29,7 +29,7 @@ impl ClientPointer {
     //
     // TODO: Normalize logging.
     // TODO: Factor out `connect_outgoing` and `connect_incoming` functions.
-    pub async fn connect(&self, ws: WebSocket) {
+    pub async fn connect(self, ws: WebSocket) {
         let (ws_sink, mut ws_source) = ws.split();
         let (buf_sink, buf_source) = mpsc::unbounded_channel();
 
