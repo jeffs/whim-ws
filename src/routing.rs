@@ -1,3 +1,4 @@
+use crate::client::ClientPointer;
 use crate::configuration::{HTTPS_PORT, HTTP_PORT};
 use crate::shell::{Shell, ShellID};
 use serde::Serialize;
@@ -5,6 +6,7 @@ use std::convert::Infallible;
 use warp::http::uri::{Authority, PathAndQuery, Scheme};
 use warp::http::Uri;
 use warp::path::FullPath;
+use warp::ws::WebSocket;
 use warp::Rejection;
 use warp::{Filter, Reply};
 
@@ -31,13 +33,6 @@ fn get_shell(id: u32) -> impl Reply {
         name: String::from("Default"),
         history: Vec::new(),
         columns: Vec::new(),
-    })
-}
-
-fn get_socket(ws: warp::ws::Ws) -> impl Reply {
-    ws.on_upgrade(|socket| {
-        println!("{:?}", socket);
-        futures::future::ready(())
     })
 }
 
@@ -69,11 +64,30 @@ async fn to_not_found(_: Rejection) -> Result<String, Rejection> {
     Err(warp::reject::not_found())
 }
 
+fn with_client(
+    client: ClientPointer,
+) -> impl Filter<Extract = (ClientPointer,), Error = Infallible> + Clone {
+    warp::any().map(move || client.clone())
+}
+
+async fn connect_client(ws: WebSocket, client: ClientPointer) {
+    client.connect(ws).await
+}
+
+async fn ws_handler(ws: warp::ws::Ws, client: ClientPointer) -> Result<impl Reply, Rejection> {
+    Ok(ws.on_upgrade(move |s| connect_client(s, client)))
+}
+
 // Defines all routes under /v0.
-pub fn api_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
+pub fn api_routes(
+    client: ClientPointer,
+) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     let health = warp::path("health").and(warp::get()).map(get_health);
     let shell = warp::path!("shell" / u32).and(warp::get()).map(get_shell);
-    let socket = warp::ws().map(get_socket).recover(to_not_found);
+    let socket = warp::ws()
+        .and(with_client(client))
+        .and_then(ws_handler)
+        .recover(to_not_found);
     warp::path("v0").and(health.or(shell).or(socket))
 }
 
@@ -100,8 +114,10 @@ pub fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> 
 
 // Merges the API and static content routes, adding compression (when
 // applicable) and logging.
-pub fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    let raw = api_routes().or(warp::fs::dir("web"));
+pub fn https_routes(
+    client: ClientPointer,
+) -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
+    let raw = api_routes(client).or(warp::fs::dir("web"));
     let zip = warp::header::exact_ignore_case("accept-encoding", "gzip")
         .and(raw.clone())
         .recover(to_not_found)
