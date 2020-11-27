@@ -38,7 +38,7 @@ impl ClientPointer {
         // Launch an async coroutine to forward all messages from the channel
         // to the websocket.  The channel is only a server-side buffer, whereas
         // the websocket is the network connection to a client application.
-        tokio::task::spawn(buf_source.forward(ws_sink).map(|result| {
+        tokio::spawn(buf_source.forward(ws_sink).map(|result| {
             if let Err(e) = result {
                 eprintln!("error sending websocket msg: {}", e);
             }
