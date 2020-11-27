@@ -21,6 +21,63 @@ impl Health {
     }
 }
 
+fn get_health() -> impl Reply {
+    warp::reply::json(&Health::fine())
+}
+
+fn get_shell(id: u32) -> impl Reply {
+    warp::reply::json(&Shell {
+        id: ShellID(id),
+        name: String::from("Default"),
+        history: Vec::new(),
+        columns: Vec::new(),
+    })
+}
+
+fn get_socket(ws: warp::ws::Ws) -> impl Reply {
+    ws.on_upgrade(|socket| {
+        println!("{:?}", socket);
+        futures::future::ready(())
+    })
+}
+
+// Maps all rejections to 404 Not Found.  The result of this function is always
+// a rejection.  Note that this function should **not** be used where a non-404
+// rejection might be a desirable response.
+//
+// When all branches of an `.or()` route fail, Warp has no way of knowing which
+// error to return to the client.  It defaults to returning the most "specific"
+// error code from any branch of the route, but that means that when a page
+// isn't found at all (which ought to be `404 Not Found`), Warp might actually
+// return some irrelevant code that made an alternate `.or()` branch fail:  A
+// WebSocket route might return `400 Invalid Request Header "connection"`, a
+// compression route might return `405 Missing Header "accept-encoding"`, etc.
+// This function exists to work around that problem by quashing such errors.
+//
+// This function's `Ok` result type is arbitrary, except that it must be
+// something `warp::Reply` is implemented for, or else the calling route's
+// filter chain won't type-check:  Warp accumulates all of a route's `or`s and
+// `recover`s into a typelist of nested Eithers, so for the Either to be a
+// valid Reply, every one of its component types must also be a valid Reply,
+// even if that Reply will never actually be returned.
+//
+// There may be a better way to do this, but I couldn't find one.  Maybe Warp
+// ought to return the first error, like Bash `pipefail`, rather than the most
+// specific one.  See also <https://github.com/seanmonstar/warp/issues/77>, but
+// note that `into_response()` is now private.
+async fn to_not_found(_: Rejection) -> Result<String, Rejection> {
+    Err(warp::reject::not_found())
+}
+
+// Defines all routes under /v0.
+pub fn api_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
+    let health = warp::path("health").and(warp::get()).map(get_health);
+    let shell = warp::path!("shell" / u32).and(warp::get()).map(get_shell);
+    let socket = warp::ws().map(get_socket).recover(to_not_found);
+    warp::path("v0").and(health.or(shell).or(socket))
+}
+
+// Permanently redirects all traffic to the HTTPS port.
 pub fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
     // TODO: Support remote clients (requiring secure login).
     // TODO: Forward user:password@.
@@ -41,31 +98,15 @@ pub fn http_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> 
         .with(warp::log("HTTP"))
 }
 
-fn get_shell(id: u32) -> impl Reply {
-    warp::reply::json(&Shell {
-        id: ShellID(id),
-        name: String::from("Default"),
-        history: Vec::new(),
-        columns: Vec::new(),
-    })
-}
-
-fn get_health() -> impl Reply {
-    warp::reply::json(&Health::fine())
-}
-
+// Merges the API and static content routes, adding compression (when
+// applicable) and logging.
 pub fn https_routes() -> impl Filter<Extract = (impl Reply,), Error = Rejection> + Clone {
-    // GET /               => web directory
-    // GET /v0/health/     => json
-    // GET /v0/shell/0     => default shell
-    let health = warp::path("health").map(get_health);
-    let shell = warp::path!("shell" / u32).map(get_shell);
-    let api = warp::get().and(warp::path("v0")).and(health.or(shell));
-    let uncompressed = api.or(warp::fs::dir("web")).with(warp::log("HTTPS"));
-    let compressed = warp::header::exact_ignore_case("accept-encoding", "gzip")
-        .and(uncompressed.clone())
+    let raw = api_routes().or(warp::fs::dir("web"));
+    let zip = warp::header::exact_ignore_case("accept-encoding", "gzip")
+        .and(raw.clone())
+        .recover(to_not_found)
         .with(warp::compression::gzip());
-    compressed.or(uncompressed)
+    zip.or(raw).with(warp::log("HTTPS"))
 }
 
 fn path_and_query() -> impl Filter<Extract = (PathAndQuery,), Error = Infallible> + Copy {
