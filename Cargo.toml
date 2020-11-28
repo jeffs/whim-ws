@@ -29,8 +29,12 @@ version = "1.0.59"
 
 # Async event framework
 [dependencies.tokio]
-version = "0.2"
-features = ["full"] # "fs", "macros", "process", "rt", "rt-multi-thread", "sync"]
+version = "0.3"
+features = ["fs", "macros", "process", "rt-multi-thread", "sync"]
+
+# Dependency conflict work-around:  Warp wants Tokio 0.2, but Whim wants 0.3
+[dependencies.tokio-compat-02]
+version = "0.1.2"
 
 # TOML (for config parsing)
 [dependencies.toml]
