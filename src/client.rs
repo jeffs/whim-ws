@@ -35,10 +35,35 @@ impl ClientPointer {
 
         // Handle outgoing messages.
         //
-        // Launch an async coroutine to forward all messages from the channel
-        // to the websocket.  The channel is only a server-side buffer, whereas
-        // the websocket is the network connection to a client application.
-        tokio::task::spawn(buf_source.forward(ws_sink).map(|result| {
+        // Launch an asynchronous task to forward all messages from the
+        // channel to the websocket.  The channel is only a server-side buffer,
+        // whereas the websocket is the network connection to a client
+        // application.
+        //
+        // Before we can spawn the task, we must "enter the runtime context,"
+        // as the Tokio [docs][] put it, or else Tokio panics:
+        //
+        // > thread 'tokio-runtime-worker' panicked at 'must be called from the
+        // > context of Tokio runtime configured with either `basic_scheduler`
+        // > or `threaded_scheduler`'
+        //
+        // This frankly feels silly to me, as we're already being blocked on by
+        // a Tokio runtime created in `crate::main`.  Moreover, "entering the
+        // runtime context" in `main` instead of here does not fix the problem.
+        //
+        // If we downgrade to Tokio 0.2, we no longer have to do this; so the
+        // silliness may be an artifact of Tokio 0.2/0.3 incompatibility that
+        // can go away once Warp (from which we got the WebSocket) upgrades to
+        // 0.3.  The WebSocket itself seems to be from a library called
+        // Tungstenite, whose authors also provide the Tokio/Tungstenite
+        // [bindings][] used by Warp, so it may be some time before any version
+        // upgrades bubble up through the stack to Whim.
+        //
+        // [docs]: https://docs.rs/tokio/0.3.4/tokio/runtime/struct.Runtime.html#method.enter
+        // [bindings]: https://github.com/snapview/tokio-tungstenite
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        let _guard = rt.enter();
+        tokio::spawn(buf_source.forward(ws_sink).map(|result| {
             if let Err(e) = result {
                 eprintln!("error sending websocket msg: {}", e);
             }
