@@ -11,14 +11,16 @@ type Sink = mpsc::UnboundedSender<Result<Message, warp::Error>>;
 // TODO: Support simultaneous clients.
 #[derive(Clone, Debug)]
 pub struct ClientPointer {
+    rt: Arc<tokio::runtime::Runtime>,
     lock: Arc<RwLock<Option<Sink>>>,
 }
 
 impl ClientPointer {
     // Creates a pointer not connected to any client.  Call `connect` to enable
     // the send method.
-    pub fn new() -> ClientPointer {
+    pub fn new(rt: Arc<tokio::runtime::Runtime>) -> ClientPointer {
         ClientPointer {
+            rt,
             lock: Arc::new(RwLock::new(None)),
         }
     }
@@ -61,8 +63,7 @@ impl ClientPointer {
         //
         // [docs]: https://docs.rs/tokio/0.3.4/tokio/runtime/struct.Runtime.html#method.enter
         // [bindings]: https://github.com/snapview/tokio-tungstenite
-        let rt = tokio::runtime::Runtime::new().unwrap();
-        let _guard = rt.enter();
+        let _guard = self.rt.enter();
         tokio::spawn(buf_source.forward(ws_sink).map(|result| {
             if let Err(e) = result {
                 eprintln!("error sending websocket msg: {}", e);
