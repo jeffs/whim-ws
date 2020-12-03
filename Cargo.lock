@@ -231,6 +231,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "dtoa"
+version = "0.4.6"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "134951f4028bdadb9b84baf4232681efbf277da25144b9b0ad65df75946c422b"
+
+[[package]]
 name = "env_logger"
 version = "0.8.2"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1174,14 +1180,14 @@ dependencies = [
 
 [[package]]
 name = "serde_urlencoded"
-version = "0.7.0"
+version = "0.6.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "edfa57a7f8d9c1d260a549e7224100f6c43d43f9103e06dd8b4095a9b2b43ce9"
+checksum = "9ec5d77e2d4c73717816afac02670d5c4f534ea95ed430442cad02e7a6e32c97"
 dependencies = [
- "form_urlencoded",
+ "dtoa",
  "itoa",
- "ryu",
  "serde",
+ "url",
 ]
 
 [[package]]
@@ -1341,7 +1347,6 @@ dependencies = [
  "lazy_static",
  "libc",
  "mio 0.7.6",
- "num_cpus",
  "pin-project-lite 0.2.0",
  "signal-hook-registry",
  "slab",
@@ -1550,6 +1555,12 @@ dependencies = [
 ]
 
 [[package]]
+name = "urlencoding"
+version = "1.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "c9232eb53352b4442e40d7900465dfc534e8cb2dc8f18656fcb2ac16112b5593"
+
+[[package]]
 name = "utf-8"
 version = "0.7.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -1574,6 +1585,8 @@ dependencies = [
 [[package]]
 name = "warp"
 version = "0.2.5"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "f41be6df54c97904af01aa23e613d4521eed7ab23537cede692d4058f6449407"
 dependencies = [
  "async-compression",
  "bytes 0.5.6",
@@ -1585,8 +1598,7 @@ dependencies = [
  "mime",
  "mime_guess",
  "multipart",
- "percent-encoding",
- "pin-project 1.0.2",
+ "pin-project 0.4.27",
  "scoped-tls",
  "serde",
  "serde_json",
@@ -1597,6 +1609,7 @@ dependencies = [
  "tower-service",
  "tracing",
  "tracing-futures",
+ "urlencoding",
 ]
 
 [[package]]
