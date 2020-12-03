@@ -1,0 +1,5 @@
+[tls]
+# TODO: Accept `~` in values.
+crt = "/home/whimmer/.ssh/local/whim.crt"
+key = "/home/whimmer/.ssh/local/whim.key"
+pass = "file:.pass"

@@ -1,30 +1,35 @@
-use warp::Filter;
+use std::error::Error;
+use std::process;
+use std::sync::Arc;
+use tokio_compat_02::FutureExt;
+use whim::{self, ClientPointer, Config, HOST_MASK, HTTPS_PORT, HTTP_PORT};
 
-use std::env;
-
-#[tokio::main]
-async fn main() {
-    // TODO: Add ArgParse.
-
-    // TODO: Automate self-signed key gen.
-    //
-    // Init CA:
-    // * genpkey -> ca.key (rsa/des3 as pem)
-    // * req -> ca.pem (x509 as pem)
-    // * install...
-    //
-    // Generate site key and cert:
-    // * genrsa
-    // * generate_csr(
-    // * Cert::sign(Key) -> Cert
-
-
-    let routes = warp::any().map(|| "Hello, world.");
-    let args: Vec<_> = env::args().collect();
-    warp::serve(routes)
+async fn async_main(rt: Arc<tokio::runtime::Runtime>) -> Result<(), Box<dyn Error>> {
+    let config = Config::from_file("whim.toml").await?;
+    let client = ClientPointer::new(rt);
+    let http = warp::serve(whim::http_routes());
+    let https = warp::serve(whim::https_routes(client))
         .tls()
-        .cert_path(&args[1])
-        .key_path(&args[2])
-        .run(([0, 0, 0, 0], 3000))
-        .await;
+        .cert_path(&config.tls.crt)
+        .key(whim::read_key(&config.tls).await?);
+    println!("https://localhost:{}/", HTTPS_PORT);
+    futures::join!(
+        http.run((HOST_MASK, HTTP_PORT)).compat(),
+        https.run((HOST_MASK, HTTPS_PORT)).compat()
+    );
+    Ok(())
+}
+
+fn main() {
+    env_logger::init();
+    let rt = Arc::new(
+        tokio::runtime::Builder::new_current_thread()
+            .enable_io()
+            .build()
+            .unwrap(),
+    );
+    if let Err(err) = rt.block_on(async_main(rt.clone())) {
+        eprintln!("error: {}", err);
+        process::exit(1);
+    }
 }
