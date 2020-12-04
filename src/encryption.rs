@@ -20,7 +20,7 @@ pub async fn read_key(tls: &TLS) -> io::Result<Vec<u8>> {
     let key = fs::read(&tls.key)
         .await
         .map_err(|err| error::path_prefix_io(&tls.key, err))?;
-    if key.starts_with("-----BEGIN ENCRYPTED".as_bytes()) {
+    if key.starts_with(b"-----BEGIN ENCRYPTED") {
         Ok(decrypt(tls).await?)
     } else {
         Ok(key)
