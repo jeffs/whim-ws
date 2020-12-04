@@ -1,4 +1,5 @@
 use serde::Deserialize;
+use std::env::{self, VarError};
 use std::error::Error;
 use std::path::PathBuf;
 use tokio::fs;
@@ -6,6 +7,13 @@ use tokio::fs;
 pub const HOST_MASK: [u8; 4] = [0, 0, 0, 0];
 pub const HTTP_PORT: u16 = 8000;
 pub const HTTPS_PORT: u16 = 3000;
+
+fn expand_home(p: PathBuf) -> Result<PathBuf, VarError> {
+    Ok(match p.strip_prefix("~") {
+        Ok(suffix) => PathBuf::from(env::var("HOME")?).join(suffix),
+        Err(_) => p,
+    })
+}
 
 #[derive(Debug, Deserialize)]
 pub struct TLS {
@@ -26,6 +34,9 @@ pub struct Config {
 impl Config {
     pub async fn from_file(path: &str) -> Result<Config, Box<dyn Error>> {
         let bytes: Vec<u8> = fs::read(path).await?;
-        Ok(toml::from_slice(&bytes)?)
+        let mut config: Config = toml::from_slice(&bytes)?;
+        config.tls.crt = expand_home(config.tls.crt)?;
+        config.tls.key = expand_home(config.tls.key)?;
+        Ok(config)
     }
 }
