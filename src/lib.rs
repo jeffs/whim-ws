@@ -1,6 +1,7 @@
 mod client;
 mod configuration;
 mod encryption;
+mod error;
 mod routing;
 mod shell;
 
