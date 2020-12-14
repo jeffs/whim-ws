@@ -1,0 +1,46 @@
+[package]
+name = "whim-http"
+version = "0.1.0"
+authors = ["Jeff Schwab <jeff@unbuggy.com>"]
+edition = "2018"
+
+[dependencies]
+
+# Logging
+[dependencies.env_logger]
+version = "0.8.2"
+
+# Futures (aka Promises)
+[dependencies.futures]
+version = "0.3"
+
+# URL decoder; e.g., "Hello%2C%20world%2E" => "Hello, world."
+[dependencies.percent-encoding]
+version = "2.1.0"
+
+# Serialization framework; separate JSON and TOML libraries work with Serde
+[dependencies.serde]
+features = ["derive"]
+version = "1.0"
+
+# JSON serialization
+[dependencies.serde_json]
+version = "1.0.59"
+
+# Async event framework
+[dependencies.tokio]
+version = "0.3"
+features = ["fs", "macros", "process", "rt", "sync"]
+
+# Dependency conflict work-around:  Warp wants Tokio 0.2, but Whim wants 0.3
+[dependencies.tokio-compat-02]
+version = "0.1.2"
+
+# TOML (for config parsing)
+[dependencies.toml]
+version = "0.5"
+
+# Web server
+[dependencies.warp]
+features = ["compression", "tls"]
+version = "0.2"

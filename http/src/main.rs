@@ -2,16 +2,16 @@ use std::error::Error;
 use std::process;
 use std::sync::Arc;
 use tokio_compat_02::FutureExt;
-use whim::{self, ClientPointer, Config, HOST_MASK, HTTPS_PORT, HTTP_PORT};
+use whim_http::{self, ClientPointer, Config, HOST_MASK, HTTPS_PORT, HTTP_PORT};
 
 async fn async_main(rt: Arc<tokio::runtime::Runtime>) -> Result<(), Box<dyn Error>> {
     let config = Config::from_file("whim.toml").await?;
     let client = ClientPointer::new(rt);
-    let http = warp::serve(whim::http_routes());
-    let https = warp::serve(whim::https_routes(client))
+    let http = warp::serve(whim_http::http_routes());
+    let https = warp::serve(whim_http::https_routes(client))
         .tls()
         .cert_path(&config.tls.crt)
-        .key(whim::read_key(&config.tls).await?);
+        .key(whim_http::read_key(&config.tls).await?);
     println!("https://localhost:{}/", HTTPS_PORT);
     futures::join!(
         http.run((HOST_MASK, HTTP_PORT)).compat(),
