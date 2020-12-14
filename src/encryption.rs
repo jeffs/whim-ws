@@ -1,4 +1,5 @@
 use crate::configuration::TLS;
+use crate::error;
 use std::io;
 use tokio::fs;
 use tokio::process::Command;
@@ -16,8 +17,10 @@ async fn decrypt(tls: &TLS) -> io::Result<Vec<u8>> {
 }
 
 pub async fn read_key(tls: &TLS) -> io::Result<Vec<u8>> {
-    let key = fs::read(&tls.key).await?;
-    if key.starts_with("-----BEGIN ENCRYPTED".as_bytes()) {
+    let key = fs::read(&tls.key)
+        .await
+        .map_err(|err| error::path_prefix_io(&tls.key, err))?;
+    if key.starts_with(b"-----BEGIN ENCRYPTED") {
         Ok(decrypt(tls).await?)
     } else {
         Ok(key)
